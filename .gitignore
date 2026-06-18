@@ -1,0 +1,17 @@
+# Secretos: NUNCA subir a GitHub. Van como secrets/env de la rutina.
+.env
+client_secret.json
+*.token
+token.json
+
+# Carpeta de trabajo local (copia temporal del CSV y las notas de Drive)
+trabajo/
+
+# Config local de Claude Code (permisos de esta maquina)
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
