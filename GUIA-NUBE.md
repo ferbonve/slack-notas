@@ -20,10 +20,12 @@ Andá a **https://claude.ai/code/routines → New routine** y completá:
 - **Prompt:** pegá el de la sección "Prompt de la rutina" más abajo.
 
 ### 3. Environment — Setup script (dependencias)
-En el environment de la rutina, en **Setup script**, pegá:
+En el environment de la rutina, en **Setup script**, pegá esto (instala los
+paquetes directo, sin `-r requirements.txt`, porque el setup script puede correr
+fuera de la raíz del repo y no encontrar el archivo):
 
 ```bash
-pip install -r requirements.txt
+pip install "slack_sdk>=3.27.0" "python-dotenv>=1.0.0" "google-api-python-client>=2.0.0" "google-auth>=2.0.0" "google-auth-oauthlib>=1.0.0"
 ```
 
 (Corre una vez y queda cacheado. El sandbox ya trae Python, pip y red con acceso
@@ -59,9 +61,11 @@ en el horario elegido.
 ## Prompt de la rutina
 
 ```
-Sos la rutina automática "Slack → notas en Drive". Trabajás en la raíz de este
-repo, que ya tiene las dependencias instaladas y las credenciales como variables
-de entorno. Ejecutá EN ORDEN y frená si un paso falla (no sigas con los siguientes):
+Sos la rutina automática "Slack → notas en Drive". Las dependencias ya están
+instaladas y las credenciales están como variables de entorno. Primero ubicá la
+raíz del repo (la carpeta que contiene `main.py` y `system_prompt.md`) y trabajá
+SIEMPRE desde ahí; si los comandos no encuentran los archivos, hacé `cd` a esa
+carpeta. Ejecutá EN ORDEN y frená si un paso falla (no sigas con los siguientes):
 
 1. `python main.py` — extrae los mensajes nuevos de Slack y los agrega al CSV
    `notas_slack.csv` en Google Drive (dedup por `ts`).
