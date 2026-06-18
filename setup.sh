@@ -10,5 +10,16 @@ pip install \
   "python-dotenv>=1.0.0" \
   "google-api-python-client>=2.0.0" \
   "google-auth>=2.0.0" \
-  "google-auth-oauthlib>=1.0.0"
+  "google-auth-oauthlib>=1.0.0" \
+  "cffi>=1.0.0"           
 echo "Dependencias instaladas."
+
+
+# httplib2 (usado por google-api-python-client) resuelve CA desde el bundle de
+# certifi, ignorando SSL_CERT_FILE. En este entorno hay un certificado
+# auto-firmado en la cadena, así que agregamos los CA del sistema al bundle.
+CERTIFI_BUNDLE=$(python -c "import certifi; print(certifi.where())")
+if [ -f /etc/ssl/certs/ca-certificates.crt ]; then
+  cat /etc/ssl/certs/ca-certificates.crt >> "$CERTIFI_BUNDLE"
+  echo "CA del sistema agregados al bundle de certifi ($CERTIFI_BUNDLE)."
+fi
