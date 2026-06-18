@@ -20,6 +20,12 @@ Las credenciales salen de la config (.env / variables de entorno):
 """
 
 import io
+import os
+
+import httplib2
+_ca = os.environ.get("SSL_CERT_FILE") or os.environ.get("REQUESTS_CA_BUNDLE")
+if _ca:
+    httplib2.CA_CERTS = _ca
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
