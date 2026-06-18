@@ -26,22 +26,12 @@ python sync_pull.py
 python sync_push.py
 ```
 
-## Convertir en rutina programada (cuando esté validado)
+## Correr en la nube (sin la PC prendida)
 
-Crear una scheduled routine de Claude Code sobre este repo, con este prompt:
+La rutina se programa en **Claude Code on the web** (claude.ai/code → Routines):
+corre en la nube de Anthropic con tu suscripción, en horario fijo. Los pasos
+exactos (conectar GitHub, setup script, variables de entorno, prompt y schedule)
+están en **[GUIA-NUBE.md](GUIA-NUBE.md)**.
 
-> Sos la rutina de notas de Slack. Ejecutá en orden, sin saltarte pasos:
-> 1. `python main.py`
-> 2. `python sync_pull.py`
-> 3. Procesá las notas siguiendo EXACTAMENTE `system_prompt.md`. El CSV es
->    `trabajo/notas_slack.csv` y la carpeta de notas es `trabajo/notas/` (las
->    subcarpetas por día van ahí adentro). Creá/actualizá los `.md` en local.
-> 4. `python sync_push.py`
->
-> Al terminar, reportá cuántos mensajes nuevos procesaste y cuántas notas
-> creaste o actualizaste.
-
-La rutina necesita estas variables de entorno (las del `.env`, que **no** se
-commitean) cargadas como secrets: `SLACK_TOKEN`, `CHANNEL_ID`,
-`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`,
-`DRIVE_FOLDER_ID`, `DRIVE_CSV_NOMBRE`.
+Variables de entorno que necesita (las del `.env`, que **no** se commitean): ver
+plantilla en `.env.example`.
