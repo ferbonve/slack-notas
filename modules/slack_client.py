@@ -95,6 +95,33 @@ class SlackNotas:
         except SlackApiError:
             return ""
 
+    # -- mensajes desde un ts --------------------------------------------- #
+    def mensajes_desde(self, oldest_ts: str) -> list[dict]:
+        """Trae todos los mensajes del canal posteriores a oldest_ts (exclusivo)."""
+        mensajes: list[dict] = []
+        cursor = None
+        try:
+            while True:
+                params = {
+                    "channel": self.config.channel_id,
+                    "oldest": oldest_ts,
+                    "inclusive": False,
+                    "limit": 200,
+                }
+                if cursor:
+                    params["cursor"] = cursor
+                resp = self.client.conversations_history(**params)
+                mensajes.extend(resp.get("messages", []))
+                if resp.get("has_more"):
+                    cursor = resp["response_metadata"]["next_cursor"]
+                else:
+                    break
+        except SlackApiError as e:
+            raise SlackError(e.response["error"]) from e
+
+        mensajes.sort(key=lambda m: float(m["ts"]))
+        return mensajes
+
     # -- mensajes por dia ------------------------------------------------ #
     def mensajes_del_dia(self, dia: date) -> list[dict]:
         """Trae TODOS los mensajes del canal dentro de un dia (00:00 a 23:59)."""
