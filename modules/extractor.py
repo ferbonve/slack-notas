@@ -17,6 +17,24 @@ def cargar_ts_existentes(contenido: str) -> set:
     reader = csv.DictReader(io.StringIO(contenido))
     return {fila["ts"] for fila in reader}
 
+def ultima_fecha(contenido: str):
+    """Devuelve la fecha (date) del mensaje más reciente del CSV, o None si está vacío."""
+    if not contenido:
+        return None
+    reader = csv.DictReader(io.StringIO(contenido))
+    max_ts = None
+    for fila in reader:
+        try:
+            ts = float(fila["ts"])
+            if max_ts is None or ts > max_ts:
+                max_ts = ts
+        except (ValueError, KeyError):
+            pass
+    if max_ts is None:
+        return None
+    return datetime.fromtimestamp(max_ts).date()
+
+
 
 def guardar_nuevos(mensajes) -> int:
     """Baja el CSV de Drive, agrega los mensajes nuevos y lo vuelve a subir.
