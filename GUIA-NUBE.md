@@ -43,7 +43,6 @@ GOOGLE_CLIENT_SECRET=...
 GOOGLE_REFRESH_TOKEN=...
 DRIVE_FOLDER_ID=1Gg_64_oagQ-DSr90tk01fMGubrkKdRkE
 DRIVE_CSV_NOMBRE=notas_slack.csv
-NOTAS_CARPETA_DRIVE=notas
 ```
 
 > Nota: hoy el store de variables no está encriptado por-secreto (quien pueda
@@ -70,13 +69,15 @@ carpeta. Ejecutá EN ORDEN y frená si un paso falla (no sigas con los siguiente
 1. `python main.py` — extrae los mensajes nuevos de Slack y los agrega al CSV
    `notas_slack.csv` en Google Drive (dedup por `ts`).
 2. `python sync_pull.py` — baja a `./trabajo/` el CSV (`trabajo/notas_slack.csv`)
-   y la carpeta de notas existente (`trabajo/notas/AAAA-MM-DD/*.md`).
+   y la carpeta de notas existente (`trabajo/notas/AAAA-MM-DD_*.md`, archivos
+   sueltos sin subcarpetas).
 3. Aplicá EXACTAMENTE las instrucciones de `system_prompt.md` sobre esos archivos:
    juntá los `ts` que ya están en el frontmatter de las notas existentes; del CSV
    procesá SOLO los `ts` que no estén en ese conjunto, en orden cronológico. Para
-   cada mensaje nuevo usá la carpeta del campo `fecha` DEL MENSAJE, asigná categoría
-   (hashtag → contenido: Compras / miscellaneous / Meditations), y fusioná con una
-   nota existente del MISMO día si es claramente el mismo ítem (sumando su `ts` al
+   cada mensaje nuevo usá como prefijo de archivo el campo `fecha` DEL MENSAJE
+   (`AAAA-MM-DD_<tema>.md`), asigná categoría (hashtag → contenido: Compras /
+   miscellaneous / Meditations), y fusioná con una nota existente del MISMO día
+   (mismo prefijo de fecha) si es claramente el mismo ítem (sumando su `ts` al
    frontmatter y regenerando lo que está entre `<!-- AUTO:INICIO -->` y
    `<!-- AUTO:FIN -->`); si no, creá una nota nueva. NUNCA toques nada fuera de las
    marcas AUTO ni reproceses un `ts` ya presente. Limpiá el texto hablado al redactar.

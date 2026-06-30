@@ -1,12 +1,13 @@
 """
-Sincroniza la carpeta de notas entre Google Drive y una carpeta local.
+Sincroniza las notas .md entre Google Drive y una carpeta local.
 
-Las notas viven en Drive como una subcarpeta (por defecto "notas") dentro de
-DRIVE_FOLDER_ID, con una subcarpeta por dia: AAAA-MM-DD/<tema>.md
+Las notas viven como archivos sueltos directamente dentro de DRIVE_FOLDER_ID
+(junto con el CSV), nombrados `AAAA-MM-DD_<tema>.md`: la fecha del mensaje va
+al principio del nombre del archivo en vez de en una subcarpeta.
 
-Responsabilidad unica: bajar ese arbol a una carpeta local de trabajo y volver
-a subir los .md (creando las subcarpetas de dia que falten). No sabe nada del
-contenido de las notas ni del CSV; solo mueve archivos via la API de Drive.
+Responsabilidad unica: bajar esos .md a una carpeta local de trabajo y volver
+a subir los que se crearon/modificaron. No sabe nada del contenido de las
+notas ni del CSV; solo mueve archivos via la API de Drive.
 
 Pensado para una Claude routine en la nube, donde NO existe el Drive de
 escritorio montado: Claude trabaja sobre la copia local y esta clase se encarga
@@ -25,14 +26,12 @@ FOLDER_MIME = "application/vnd.google-apps.folder"
 
 
 class NotasDrive:
-    """Lee y escribe el arbol de notas (.md por dia) en Google Drive."""
+    """Lee y escribe las notas (.md sueltas) en Google Drive."""
 
     def __init__(self, config: Config):
         self.config = config
-        self.parent_id = config.drive_folder_id          # donde tambien vive el CSV
-        self.nombre_carpeta = config.notas_carpeta_drive  # ej: "notas"
+        self.parent_id = config.drive_folder_id  # misma carpeta donde vive el CSV
         self._service = None
-        self._notas_root_id = None
 
     # -- conexion (perezosa) -------------------------------------------- #
     @property
@@ -40,47 +39,6 @@ class NotasDrive:
         if self._service is None:
             self._service = construir_service(self.config)
         return self._service
-
-    # -- helpers de carpetas -------------------------------------------- #
-    def _buscar_carpeta(self, nombre: str, parent_id: str | None) -> str | None:
-        consulta = (
-            f"name = '{nombre}' and mimeType = '{FOLDER_MIME}' and trashed = false"
-        )
-        if parent_id:
-            consulta += f" and '{parent_id}' in parents"
-        resp = (
-            self.service.files()
-            .list(q=consulta, spaces="drive", fields="files(id, name)", pageSize=1)
-            .execute()
-        )
-        archivos = resp.get("files", [])
-        return archivos[0]["id"] if archivos else None
-
-    def _crear_carpeta(self, nombre: str, parent_id: str | None) -> str:
-        metadata = {"name": nombre, "mimeType": FOLDER_MIME}
-        if parent_id:
-            metadata["parents"] = [parent_id]
-        creado = self.service.files().create(body=metadata, fields="id").execute()
-        return creado["id"]
-
-    def _asegurar_carpeta(self, nombre: str, parent_id: str | None) -> str:
-        """Devuelve el ID de la carpeta, creandola si no existe."""
-        return self._buscar_carpeta(nombre, parent_id) or self._crear_carpeta(
-            nombre, parent_id
-        )
-
-    def notas_root_id(self) -> str:
-        """ID de la subcarpeta de notas (la crea la primera vez)."""
-        if self._notas_root_id is None:
-            if not self.parent_id:
-                raise DriveError(
-                    "Falta DRIVE_FOLDER_ID en el .env: no se donde crear la "
-                    "carpeta de notas."
-                )
-            self._notas_root_id = self._asegurar_carpeta(
-                self.nombre_carpeta, self.parent_id
-            )
-        return self._notas_root_id
 
     # -- helpers de archivos -------------------------------------------- #
     def _listar(self, parent_id: str) -> list[dict]:
@@ -114,60 +72,56 @@ class NotasDrive:
             _, listo = descarga.next_chunk()
         return buffer.getvalue()
 
+    def _notas_en_drive(self) -> list[dict]:
+        """Archivos .md sueltos directamente en DRIVE_FOLDER_ID (sin carpetas)."""
+        if not self.parent_id:
+            raise DriveError(
+                "Falta DRIVE_FOLDER_ID en el .env: no se donde estan las notas."
+            )
+        return [
+            a
+            for a in self._listar(self.parent_id)
+            if a["mimeType"] != FOLDER_MIME and a["name"].endswith(".md")
+        ]
+
     # -- operaciones ----------------------------------------------------- #
     def bajar(self, destino: Path) -> int:
-        """Descarga el arbol de notas de Drive a 'destino'. Devuelve cuantas bajo."""
+        """Descarga las notas .md de Drive a 'destino' (carpeta plana). Devuelve cuantas bajo."""
         destino = Path(destino)
         destino.mkdir(parents=True, exist_ok=True)
         total = 0
-        for dia in self._listar(self.notas_root_id()):
-            if dia["mimeType"] != FOLDER_MIME:
-                continue  # solo nos interesan las subcarpetas de dia
-            carpeta_local = destino / dia["name"]
-            carpeta_local.mkdir(parents=True, exist_ok=True)
-            for archivo in self._listar(dia["id"]):
-                if archivo["mimeType"] == FOLDER_MIME:
-                    continue
-                (carpeta_local / archivo["name"]).write_bytes(
-                    self._descargar(archivo["id"])
-                )
-                total += 1
+        for archivo in self._notas_en_drive():
+            (destino / archivo["name"]).write_bytes(self._descargar(archivo["id"]))
+            total += 1
         return total
 
     def subir(self, origen: Path) -> int:
-        """Sube/actualiza los .md de 'origen' a Drive. Devuelve cuantos subio.
+        """Sube/actualiza los .md de 'origen' a DRIVE_FOLDER_ID. Devuelve cuantos subio.
 
-        Espera la estructura: origen/AAAA-MM-DD/<tema>.md
-        Crea las subcarpetas de dia que falten y pisa los .md con el mismo nombre.
+        Espera la estructura: origen/AAAA-MM-DD_<tema>.md (archivos sueltos,
+        sin subcarpetas). Pisa los .md que ya existan con el mismo nombre.
         """
         origen = Path(origen)
         if not origen.exists():
             return 0
-        root = self.notas_root_id()
+        existentes = {a["name"]: a["id"] for a in self._notas_en_drive()}
         total = 0
-        for carpeta_dia in sorted(p for p in origen.iterdir() if p.is_dir()):
-            dia_id = self._asegurar_carpeta(carpeta_dia.name, root)
-            existentes = {
-                a["name"]: a["id"]
-                for a in self._listar(dia_id)
-                if a["mimeType"] != FOLDER_MIME
-            }
-            for md in sorted(carpeta_dia.glob("*.md")):
-                media = MediaIoBaseUpload(
-                    io.BytesIO(md.read_bytes()),
-                    mimetype="text/markdown",
-                    resumable=False,
-                )
-                if md.name in existentes:
-                    self.service.files().update(
-                        fileId=existentes[md.name], media_body=media
-                    ).execute()
-                else:
-                    metadata = {"name": md.name, "parents": [dia_id]}
-                    self.service.files().create(
-                        body=metadata, media_body=media, fields="id"
-                    ).execute()
-                total += 1
+        for md in sorted(origen.glob("*.md")):
+            media = MediaIoBaseUpload(
+                io.BytesIO(md.read_bytes()),
+                mimetype="text/markdown",
+                resumable=False,
+            )
+            if md.name in existentes:
+                self.service.files().update(
+                    fileId=existentes[md.name], media_body=media
+                ).execute()
+            else:
+                metadata = {"name": md.name, "parents": [self.parent_id]}
+                self.service.files().create(
+                    body=metadata, media_body=media, fields="id"
+                ).execute()
+            total += 1
         return total
 
 

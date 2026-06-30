@@ -1,9 +1,9 @@
 """
 Paso 4 (ultimo) de la rutina: sube a Drive las notas que Claude creo/actualizo.
 
-Toma ./trabajo/notas/AAAA-MM-DD/*.md y los sube a la subcarpeta de notas en
-Drive, creando las subcarpetas de dia que falten. Corre DESPUES de que Claude
-termino de aplicar system_prompt.md sobre la carpeta local.
+Toma ./trabajo/notas/AAAA-MM-DD_*.md y los sube sueltos (sin subcarpetas)
+directo a DRIVE_FOLDER_ID. Corre DESPUES de que Claude termino de aplicar
+system_prompt.md sobre la carpeta local.
 """
 
 from pathlib import Path

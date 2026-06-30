@@ -32,9 +32,6 @@ class Config:
         self.google_refresh_token = os.environ.get("GOOGLE_REFRESH_TOKEN", "")
         self.drive_csv_nombre = os.environ.get("DRIVE_CSV_NOMBRE", "notas_slack.csv")
         self.drive_folder_id = os.environ.get("DRIVE_FOLDER_ID", "").strip()
-        # Nombre de la subcarpeta (dentro de drive_folder_id) donde viven las
-        # notas .md, organizadas en subcarpetas por dia (AAAA-MM-DD/).
-        self.notas_carpeta_drive = os.environ.get("NOTAS_CARPETA_DRIVE", "notas")
 
     def validar(self) -> bool:
         """Devuelve True si la config esta completa; si no, explica que falta."""
