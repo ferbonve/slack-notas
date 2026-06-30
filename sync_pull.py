@@ -2,8 +2,8 @@
 Paso 2 de la rutina: baja de Drive todo lo que Claude necesita para trabajar.
 
 Deja en ./trabajo/ :
-  - notas_slack.csv        (el CSV que dejo el extractor, main.py)
-  - notas/AAAA-MM-DD/*.md  (las notas ya existentes, para no duplicar)
+  - notas_slack.csv            (el CSV que dejo el extractor, main.py)
+  - notas/AAAA-MM-DD_*.md      (las notas ya existentes, sueltas, para no duplicar)
 
 Claude despues procesa esa carpeta local siguiendo system_prompt.md y al final
 se sube con sync_push.py. Corre SIEMPRE despues de main.py.

@@ -9,7 +9,7 @@ completo se puede probar igual desde tu PC (mismas credenciales del `.env`).
 1. `python main.py` — el extractor trae los mensajes nuevos de Slack y los
    agrega al CSV `notas_slack.csv` en Drive (dedup por `ts`).
 2. `python sync_pull.py` — baja a `./trabajo/` el CSV y la carpeta de notas
-   existente (`trabajo/notas/AAAA-MM-DD/*.md`).
+   existente (`trabajo/notas/AAAA-MM-DD_*.md`, archivos sueltos sin subcarpetas).
 3. **Claude** procesa `./trabajo/` siguiendo `system_prompt.md`: lee el CSV,
    ignora los `ts` ya presentes en las notas y crea/actualiza los `.md` locales.
 4. `python sync_push.py` — sube las notas nuevas/modificadas de vuelta a Drive.
